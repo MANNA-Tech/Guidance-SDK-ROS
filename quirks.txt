@@ -1,0 +1,5 @@
+Library does not handle missing USB device gracefully.
+
+/imu output not valid unless flight controller attached, regardless of "DIY" mode setting.
+
+Aircraft obstace avoidance and USB are not mutually exclusive.
