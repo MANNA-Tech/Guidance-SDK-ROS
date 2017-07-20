@@ -4,6 +4,8 @@
  *
  */
 
+// cam_select.srv
+
 #include <stdio.h>
 #include <string.h>
 #include <iostream>
@@ -20,6 +22,7 @@
 #include <geometry_msgs/TransformStamped.h> //IMU
 #include <geometry_msgs/Vector3Stamped.h> //velocity
 #include <sensor_msgs/LaserScan.h> //obstacle distance & ultrasonic
+#include <guidance/cam_select.h>
 
 ros::Publisher depth_image_pub;
 ros::Publisher left_image_pub;
@@ -28,6 +31,7 @@ ros::Publisher imu_pub;
 ros::Publisher obstacle_distance_pub;
 ros::Publisher velocity_pub;
 ros::Publisher ultrasonic_pub;
+ros::ServiceServer cam_select_srv;
 
 using namespace cv;
 
@@ -163,6 +167,48 @@ int my_callback(int data_type, int data_len, char *content)
     return 0;
 }
 
+bool cam_select_callback(guidance::cam_select::Request &request, guidance::cam_select::Response &response)
+{
+    ROS_DEBUG("I got called with val %d...", request.camera_index);
+
+    if(request.camera_index > 4)
+    {
+        ROS_WARN("Requested camera index %d out of range.", request.camera_index);
+        response.ok = false;
+        return true;
+    }
+
+    CAMERA_ID = (e_vbus_index)request.camera_index;
+
+    int err_code = stop_transfer();
+    if(err_code)
+    {
+        ROS_FATAL("guidance stop xfer failed!");
+        exit(1);
+    }
+    reset_config();
+
+    // Err detect?
+    select_greyscale_image(CAMERA_ID, true);
+    select_greyscale_image(CAMERA_ID, false);
+    select_depth_image(CAMERA_ID);
+
+    select_imu();
+    select_ultrasonic();
+    select_obstacle_distance();
+    select_velocity();
+
+    err_code = start_transfer();
+    if(err_code)
+    {
+        ROS_FATAL("guidance start xfer failed!");
+        exit(1);
+    }
+
+    response.ok = true;
+    return true;
+}
+
 int main(int argc, char** argv)
 {
     /* initialize ros */
@@ -175,6 +221,7 @@ int main(int argc, char** argv)
     velocity_pub  			= my_node.advertise<geometry_msgs::Vector3Stamped>("guidance/velocity",1);
     obstacle_distance_pub	= my_node.advertise<sensor_msgs::LaserScan>("guidance/obstacle_distance",1);
     ultrasonic_pub			= my_node.advertise<sensor_msgs::LaserScan>("guidance/ultrasonic",1);
+    cam_select_srv          = my_node.advertiseService("guidance/cam_select", cam_select_callback);
 
     /* initialize guidance */
     reset_config();
@@ -221,16 +268,18 @@ int main(int argc, char** argv)
         ROS_FATAL("guidance select_greyscale_image failed: %i", err_code);
         exit(1);
     }
+    err_code = select_greyscale_image(CAMERA_ID, false);
+    if(err_code)
+    {
+        ROS_FATAL("guidance select_greyscale_image failed: %i", err_code);
+        exit(1);
+    }
     err_code = select_depth_image(CAMERA_ID);
     if(err_code)
     {
         ROS_FATAL("guidance select_greyscale_image failed: %i", err_code);
         exit(1);
     }
-#if 0
-    err_code = select_greyscale_image(CAMERA_ID, false);
-	RETURN_IF_ERR(err_code);
-#endif
     select_imu();
     select_ultrasonic();
     select_obstacle_distance();
@@ -266,31 +315,6 @@ int main(int argc, char** argv)
 	while (ros::ok())
 	{
 		g_event.wait_event();
-#if 0
-				err_code = stop_transfer();
-				RETURN_IF_ERR(err_code);
-				reset_config();
-
-				if (key == 'q') break;
-				if (key == 'w') CAMERA_ID = e_vbus1;
-				if (key == 'd') CAMERA_ID = e_vbus2;
-				if (key == 'x') CAMERA_ID = e_vbus3;
-				if (key == 'a') CAMERA_ID = e_vbus4;	   
-				if (key == 's') CAMERA_ID = e_vbus5;
-
-				select_greyscale_image(CAMERA_ID, true);
-				select_greyscale_image(CAMERA_ID, false);
-				select_depth_image(CAMERA_ID);
-
-                select_imu();
-                select_ultrasonic();
-                select_obstacle_distance();
-                select_velocity();
-
-				err_code = start_transfer();
-				RETURN_IF_ERR(err_code);
-				key = 0;
-#endif
 
         ros::spinOnce();
 	}

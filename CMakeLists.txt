@@ -7,8 +7,20 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   sensor_msgs
   geometry_msgs
+  message_generation
 )
 find_package(OpenCV 3 REQUIRED core highgui)
+
+## Generate services in the 'srv' folder
+add_service_files(
+  FILES
+  cam_select.srv
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
 
 catkin_package(
 )
