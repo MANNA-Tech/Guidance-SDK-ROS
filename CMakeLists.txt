@@ -23,6 +23,7 @@ generate_messages(
 )
 
 catkin_package(
+  CATKIN_DEPENDS message_runtime
 )
 
 include_directories(
@@ -57,19 +58,21 @@ link_libraries(
   usb-1.0
   yaml-cpp)
 
-add_executable(guidanceNode
-  src/GuidanceNode.cpp
-  src/DJI_utility.cpp)
+#add_executable(guidanceNode
+#  src/GuidanceNode.cpp
+#  src/DJI_utility.cpp)
 
 add_executable(core
   src/core.cpp
   src/DJI_utility.cpp)
 
-add_executable(guidanceNodeTest
-  src/GuidanceNodeTest.cpp)
+add_dependencies(core guidance_generate_messages_cpp)
 
-add_executable(guidanceNodeCalibration
-  src/GuidanceNodeCalibration.cpp
-  src/DJI_utility.cpp)
+#add_executable(guidanceNodeTest
+#  src/GuidanceNodeTest.cpp)
+
+#add_executable(guidanceNodeCalibration
+#  src/GuidanceNodeCalibration.cpp
+#  src/DJI_utility.cpp)
 
 #  vim: set et fenc=utf-8 ff=unix sts=0 sw=2 ts=2 :
